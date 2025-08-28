@@ -30,6 +30,19 @@ def clean_text(text):
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
     return text.strip()
 
+def format_property_name(text):
+    """Convert all-caps property names to title case (first letter of each word capitalized).
+    Special handling for 'CPU' to keep it as 'CPU'."""
+    if not text:
+        return ""
+    # Convert to string first
+    text = str(text)
+    # Convert to title case (first letter of each word capitalized)
+    result = text.title()
+    # Special handling: keep "CPU" as "CPU" (all caps)
+    result = result.replace("Cpu", "CPU")
+    return result
+
 def extract_data_from_excel(file_path):
     """Extract data from Excel file."""
     data = {
@@ -389,39 +402,39 @@ def create_word_document(data, output_file):
             # Add HMC data rows
             if hmc.get('hostname'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'HOSTNAME'
+                row_cells[0].text = format_property_name('HOSTNAME')
                 row_cells[1].text = hmc['hostname']
             
             if hmc.get('hardware_model'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'MODEL'
+                row_cells[0].text = format_property_name('MODEL')
                 row_cells[1].text = hmc['hardware_model']
             
             if hmc.get('serial'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'SERIAL'
+                row_cells[0].text = format_property_name('SERIAL')
                 row_cells[1].text = hmc['serial']
             
             if hmc.get('base_version'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'BASE VERSION'
+                row_cells[0].text = format_property_name('BASE VERSION')
                 row_cells[1].text = hmc['base_version']
             
             if hmc.get('service_pack'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'SERVICE PACK'
+                row_cells[0].text = format_property_name('SERVICE PACK')
                 row_cells[1].text = hmc['service_pack']
             
             if hmc.get('gateway'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'GATEWAY'
+                row_cells[0].text = format_property_name('GATEWAY')
                 row_cells[1].text = hmc['gateway']
             
             # Add IP addresses
             if hmc.get('ip_addresses'):
                 for interface, ip in hmc['ip_addresses'].items():
                     row_cells = table.add_row().cells
-                    row_cells[0].text = f'IP ADDR - {interface.upper()}'
+                    row_cells[0].text = f'{format_property_name("IP ADDR")} - {interface.title()}'
                     row_cells[1].text = ip
             
             doc.add_paragraph()  # Add spacing between tables
@@ -439,57 +452,54 @@ def create_word_document(data, output_file):
             # Add LPAR data rows
             if lpar.get('lpar_name'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'LPAR NAME'
+                row_cells[0].text = format_property_name('LPAR NAME')
                 row_cells[1].text = lpar['lpar_name']
             
+            # Group CPU information into one row
+            cpu_values = []
             if lpar.get('desired_entitled_cpu'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'DESIRED ENTITLED CPU'
-                row_cells[1].text = lpar['desired_entitled_cpu']
-            
+                cpu_values.append(f"Desired: {lpar['desired_entitled_cpu']}")
             if lpar.get('min_cpu'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'MIN CPU'
-                row_cells[1].text = lpar['min_cpu']
-            
+                cpu_values.append(f"Min: {lpar['min_cpu']}")
             if lpar.get('max_cpu'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'MAX CPU'
-                row_cells[1].text = lpar['max_cpu']
+                cpu_values.append(f"Max: {lpar['max_cpu']}")
             
+            if cpu_values:
+                row_cells = table.add_row().cells
+                row_cells[0].text = format_property_name('CPU')
+                row_cells[1].text = " | ".join(cpu_values)
+            
+            # Group Virtual Processor information into one row
+            vproc_values = []
             if lpar.get('desired_virtual_processor'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'DESIRED VIRTUAL PROCESSOR'
-                row_cells[1].text = lpar['desired_virtual_processor']
-            
+                vproc_values.append(f"Desired: {lpar['desired_virtual_processor']}")
             if lpar.get('min_virtual_processor'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'MIN VIRTUAL PROCESSOR'
-                row_cells[1].text = lpar['min_virtual_processor']
-            
+                vproc_values.append(f"Min: {lpar['min_virtual_processor']}")
             if lpar.get('max_virtual_processor'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'MAX VIRTUAL PROCESSOR'
-                row_cells[1].text = lpar['max_virtual_processor']
+                vproc_values.append(f"Max: {lpar['max_virtual_processor']}")
             
+            if vproc_values:
+                row_cells = table.add_row().cells
+                row_cells[0].text = format_property_name('VIRTUAL PROCESSOR')
+                row_cells[1].text = " | ".join(vproc_values)
+            
+            # Group Memory information into one row
+            memory_values = []
             if lpar.get('entitled_memory_gb'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'ENTITLED MEMORY (GB)'
-                row_cells[1].text = lpar['entitled_memory_gb']
-            
+                memory_values.append(f"Entitled: {lpar['entitled_memory_gb']}")
             if lpar.get('min_memory_gb'):
-                row_cells = table.add_row().cells
-                row_cells[0].text = 'MIN MEMORY (GB)'
-                row_cells[1].text = lpar['min_memory_gb']
-            
+                memory_values.append(f"Min: {lpar['min_memory_gb']}")
             if lpar.get('max_memory_gb'):
+                memory_values.append(f"Max: {lpar['max_memory_gb']}")
+            
+            if memory_values:
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'MAX MEMORY (GB)'
-                row_cells[1].text = lpar['max_memory_gb']
+                row_cells[0].text = format_property_name('MEMORY (GB)')
+                row_cells[1].text = " | ".join(memory_values)
             
             if lpar.get('power_server'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'POWER SERVER'
+                row_cells[0].text = format_property_name('POWER SERVER')
                 row_cells[1].text = lpar['power_server']
             
             doc.add_paragraph()  # Add spacing between tables
@@ -507,37 +517,37 @@ def create_word_document(data, output_file):
             # Add server data rows
             if server.get('server_name'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'SERVER NAME'
+                row_cells[0].text = format_property_name('SERVER NAME')
                 row_cells[1].text = server['server_name']
             
             if server.get('model'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'MODEL'
+                row_cells[0].text = format_property_name('MODEL')
                 row_cells[1].text = server['model']
             
             if server.get('serial'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'SERIAL'
+                row_cells[0].text = format_property_name('SERIAL')
                 row_cells[1].text = server['serial']
             
             if server.get('cpu'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'CPU CORES'
+                row_cells[0].text = format_property_name('CPU CORES')
                 row_cells[1].text = server['cpu']
             
             if server.get('memory'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'MEMORY (GB)'
+                row_cells[0].text = format_property_name('MEMORY (GB)')
                 row_cells[1].text = server['memory']
             
             if server.get('firmware_level'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'FIRMWARE LEVEL'
+                row_cells[0].text = format_property_name('FIRMWARE LEVEL')
                 row_cells[1].text = server['firmware_level']
             
             if server.get('fsp_ip_address'):
                 row_cells = table.add_row().cells
-                row_cells[0].text = 'FSP IP ADDRESS'
+                row_cells[0].text = format_property_name('FSP IP ADDRESS')
                 row_cells[1].text = server['fsp_ip_address']
             
             doc.add_paragraph()  # Add spacing between tables
